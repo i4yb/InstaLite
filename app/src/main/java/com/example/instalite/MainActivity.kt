@@ -1,10 +1,13 @@
 package com.example.instalite
 
 import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.View
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
@@ -14,6 +17,8 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import android.widget.Toast
+import org.json.JSONTokener
 
 class MainActivity : AppCompatActivity() {
 
@@ -95,4 +100,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() { super.onPause(); CookieManager.getInstance().flush() }
+
+    // Debug aid: hold Volume Up to copy an outline of the current page to the clipboard
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP && event.repeatCount == 8) { copyDump(); return true }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    private fun copyDump() {
+        web.evaluateJavascript("(window.__igDump ? window.__igDump() : 'no dump')") { r ->
+            val text = try { JSONTokener(r).nextValue().toString() } catch (e: Exception) { r ?: "" }
+            (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager)
+                .setPrimaryClip(ClipData.newPlainText("page", text))
+            Toast.makeText(this, "Page outline copied", Toast.LENGTH_SHORT).show()
+        }
+    }
 }
